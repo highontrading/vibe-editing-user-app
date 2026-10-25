@@ -69,7 +69,7 @@ The single most important design decision: **the AI never touches pixels directl
 This is what makes the AI edit good. Produce a compact, text-only **footage manifest** Claude can reason over:
 - **Transcript** with word-level timestamps and speaker labels (AssemblyAI / Deepgram / WhisperX).
 - **Scene/shot boundaries** (PySceneDetect or FFmpeg scene filter).
-- **Per-shot description**: sample 1–3 frames per shot, send to Claude vision (Haiku 5.5 for cost, Opus for quality) → "medium shot, woman at desk talking, laptop on table, warm light, slight camera shake".
+- **Per-shot description**: sample 1–3 frames per shot, send to Claude vision as images (Claude does not accept video; Haiku 5.5 for cost, Opus for quality; a 720p frame ≈ 1,200 tokens; upload frames once via the Files API) → "medium shot, woman at desk talking, laptop on table, warm light, slight camera shake".
 - **Audio events**: silence spans, laughter, music already present, loudness.
 - **Quality signals**: blur, exposure, shake, filler words ("um"), dead air.
 - Store as `analysis` JSON on the asset. 10 minutes of footage ≈ 10–25k tokens of manifest, which fits easily in a 1M-context model.
@@ -123,7 +123,7 @@ Two viable engines; the recommendation is **Remotion**, with FFmpeg as the fallb
 | Motion graphics, animated captions, 3D titles | Excellent (it's React + CSS + WebGL) | Painful |
 | Preview in browser | Native (`@remotion/player`) | No |
 | Speed | Slower (headless Chrome frames); parallelise via Lambda/Modal | Very fast for cut+concat+overlay |
-| Licence | Free for individuals/≤3 people; company licence otherwise | Free (LGPL/GPL) |
+| Licence | Free for individuals/≤3 people; prompt-to-video products need "Remotion for Automators": $0.01/render, $100/mo minimum | Free (LGPL/GPL) |
 | Where | Remotion Lambda (AWS) or self-host on Modal/Fly | Any CPU box |
 
 Pragmatic path: Remotion for anything with graphics/captions (most jobs); for jobs with no graphics, cut and concat with FFmpeg directly. Always do a final FFmpeg pass for loudness normalisation (EBU R128) and correct encode settings per platform (TikTok/Reels/YouTube).
@@ -134,7 +134,7 @@ Render output goes back to R2; the UI gets a signed URL. Keep the EDL so re-expo
 - Use **Inngest** or **Trigger.dev** (both have generous free tiers, durable step functions, retries, concurrency limits, and a dashboard). Avoid rolling your own BullMQ at first.
 - Pipeline per project: `ingest → analyze → plan (agent) → fetch/generate media → render → finalize`.
 - Each step is idempotent and writes progress to the `jobs` table; the UI subscribes.
-- Heavy compute (FFmpeg, Remotion, WhisperX if self-hosted) runs on **Modal** (pay-per-second CPU/GPU, scales to zero) or **Fly Machines**. Modal is the easiest for a non-infra founder.
+- Heavy compute (FFmpeg, Remotion, WhisperX if self-hosted) runs on **Modal** (pay-per-second CPU/GPU, scales to zero) or **Google Cloud Run Jobs**. Modal is the easiest for a non-infra founder. (Fly.io dropped GPU machines in Aug 2026; its CPU machines are still fine for a dedicated render fleet later.)
 
 ### 2.9 Data model (Postgres)
 `users`, `workspaces`, `subscriptions` (Stripe), `credit_ledger`, `assets` (raw uploads, generated media, renders), `asset_analysis`, `projects`, `edl_versions` (every agent/user change = new version), `conversations`/`messages`, `jobs`, `recipes`, `style_profiles`, `exports`.
