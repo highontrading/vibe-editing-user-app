@@ -1,4 +1,5 @@
 /** Seeds built-in recipes. Safe to re-run (upserts by slug). */
+import "./load-env";
 import { prisma } from "./index";
 import { BUILTIN_RECIPES } from "./recipes";
 
