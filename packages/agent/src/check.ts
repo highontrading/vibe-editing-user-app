@@ -1,7 +1,7 @@
 /** Self-check: run the deterministic edl checks and auto-fix the fixable ones with ops. */
 import { getTrack, mainClips, PLATFORM_PRESETS, runChecks, type CheckResult, type EditOp, type EditScript, type Platform, PLATFORMS } from "@vibe/edl";
 import type { ProjectContext } from "./types";
-import { OpRecorder, normalizeEnds, trimScriptToTarget } from "./builder";
+import { OpRecorder, audioClipPatchOp, captionSettingsOp, normalizeEnds, trimScriptToTarget } from "./builder";
 
 export interface SelfCheckResult {
   checks: CheckResult[];
@@ -29,13 +29,13 @@ export function selfCheckSync(script: EditScript, ctx?: Pick<ProjectContext, "pl
           break;
         }
         case "caption-safe": {
-          rec.apply({ op: "setCaptionSettings", settings: { position: "center" } });
+          rec.apply(captionSettingsOp(rec.script, { position: "center" }));
           fixed.push("moved captions into the safe zone");
           break;
         }
         case "music-level": {
           const music = getTrack(rec.script, "audio", (t) => t.role === "music");
-          for (const clip of music?.clips ?? []) if (clip.gainDb > -12) rec.apply({ op: "updateAudioClip", clipId: clip.id, patch: { gainDb: -12, ducking: true } });
+          for (const clip of music?.clips ?? []) if (clip.gainDb > -12) rec.apply(audioClipPatchOp(clip, { gainDb: -12, ducking: true }));
           fixed.push("lowered music under speech");
           break;
         }

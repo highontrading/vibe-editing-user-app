@@ -23,7 +23,8 @@ import {
   type EditScript,
 } from "@vibe/edl";
 import type { MediaProvider, ProjectContext } from "./types";
-import { OpRecorder, addBroll, addSfx, brollQuery, normalizeEnds, setMusic, trimScriptToTarget, captionSettingsFor } from "./builder";
+import { OpRecorder, addBroll, addSfx, audioClipPatchOp, brollQuery, captionSettingsOp, normalizeEnds, setMusic, trimScriptToTarget, captionSettingsFor } from "./builder";
+import { CaptionSettingsSchema } from "@vibe/edl";
 import { fmtSec } from "./manifest";
 
 export interface FinishPayload {
@@ -282,7 +283,7 @@ export function makeTools(session: EditSession) {
       run: ({ style }) => {
         count();
         session.apply({ op: "setCaptionStyle", style });
-        session.apply({ op: "setCaptionSettings", settings: captionSettingsFor(style, {}, session.script.meta.platform ?? "custom") }, `captions switched to ${style}`);
+        session.apply({ op: "setCaptionSettings", settings: CaptionSettingsSchema.parse(captionSettingsFor(style, {}, session.script.meta.platform ?? "custom")) }, `captions switched to ${style}`);
         return brief(session, `Captions now ${style}.`);
       },
     }),
@@ -307,7 +308,7 @@ export function makeTools(session: EditSession) {
         count();
         const settings = Object.fromEntries(Object.entries(input).filter(([, v]) => v !== null)) as Record<string, unknown>;
         if (typeof settings.maxWordsPerLine === "number") settings.maxWordsPerLine = Math.max(1, Math.round(settings.maxWordsPerLine));
-        session.apply({ op: "setCaptionSettings", settings }, `caption settings ${JSON.stringify(settings)}`);
+        session.apply(captionSettingsOp(session.script, settings), `caption settings ${JSON.stringify(settings)}`);
         return brief(session, `Caption settings: ${JSON.stringify(getTrack(session.script, "captions")?.settings)}`);
       },
     }),
@@ -422,7 +423,7 @@ export function makeTools(session: EditSession) {
         const music = getTrack(session.script, "audio", (t) => t.role === "music");
         if (!music?.clips.length) throw new Error("There is no music to adjust; use set_music to add some.");
         const patch = Object.fromEntries(Object.entries(input).filter(([, v]) => v !== null)) as { gainDb?: number; ducking?: boolean; fadeInMs?: number; fadeOutMs?: number };
-        for (const c of music.clips) session.apply({ op: "updateAudioClip", clipId: c.id, patch });
+        for (const c of music.clips) session.apply(audioClipPatchOp(c, patch));
         session.log.push(`music adjusted ${JSON.stringify(patch)}`);
         return brief(session, `Music adjusted: ${JSON.stringify(patch)}.`);
       },
@@ -572,4 +573,3 @@ export function findPhrase(script: EditScript, query: string): PhraseMatch[] {
   return out;
 }
 
-export { brollQuery };

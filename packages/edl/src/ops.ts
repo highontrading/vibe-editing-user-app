@@ -21,6 +21,41 @@ import { computeDuration, newId } from "./helpers";
 
 const ms = z.number().int().nonnegative();
 
+/** Patch schemas: all-optional and WITHOUT defaults (zod 4 re-applies defaults on .partial()). */
+export const CaptionSettingsPatchSchema = z.object({
+  fontSize: z.number().positive().optional(),
+  position: z.enum(["top", "center", "bottom"]).optional(),
+  offset: z.number().min(-1).max(1).optional(),
+  color: z.string().optional(),
+  highlightColor: z.string().optional(),
+  fontFamily: z.string().optional(),
+  uppercase: z.boolean().optional(),
+  emoji: z.boolean().optional(),
+  maxWordsPerLine: z.number().int().positive().optional(),
+  mode: z.enum(["word", "line"]).optional(),
+  animation: z.enum(["pop", "fade", "slide", "none"]).optional(),
+});
+export const AudioClipPatchSchema = z.object({
+  assetId: z.string().optional(),
+  startMs: ms.optional(),
+  inMs: ms.optional(),
+  outMs: ms.nullable().optional(),
+  gainDb: z.number().optional(),
+  fadeInMs: ms.optional(),
+  fadeOutMs: ms.optional(),
+  ducking: z.boolean().optional(),
+  loop: z.boolean().optional(),
+  reason: z.string().optional(),
+  label: z.string().optional(),
+});
+export const GraphicItemPatchSchema = z.object({
+  component: GraphicItemSchema.shape.component.optional(),
+  startMs: ms.optional(),
+  durationMs: ms.optional(),
+  props: z.record(z.string(), z.unknown()).optional(),
+  reason: z.string().optional(),
+});
+
 export const EditOpSchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("addVideoClip"), trackId: z.string().optional(), clip: VideoClipSchema.partial({ id: true }) }),
   z.object({ op: z.literal("trimClip"), clipId: z.string(), inMs: ms.optional(), outMs: ms.optional() }),
@@ -39,16 +74,16 @@ export const EditOpSchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("setTransition"), clipId: z.string(), side: z.enum(["in", "out"]), transition: TransitionSchema.nullable() }),
   z.object({ op: z.literal("removeRange"), startMs: ms, endMs: ms }),
   z.object({ op: z.literal("addAudioClip"), role: z.enum(["music", "sfx", "voice", "dialogue"]), clip: AudioClipSchema.partial({ id: true }) }),
-  z.object({ op: z.literal("updateAudioClip"), clipId: z.string(), patch: AudioClipSchema.partial().omit({ id: true }) }),
+  z.object({ op: z.literal("updateAudioClip"), clipId: z.string(), patch: AudioClipPatchSchema }),
   z.object({ op: z.literal("deleteAudioClip"), clipId: z.string() }),
   z.object({ op: z.literal("setTrackMuted"), trackId: z.string(), muted: z.boolean() }),
   z.object({ op: z.literal("setCaptionStyle"), style: z.enum(CAPTION_STYLE_IDS) }),
-  z.object({ op: z.literal("setCaptionSettings"), settings: CaptionSettingsSchema.partial() }),
+  z.object({ op: z.literal("setCaptionSettings"), settings: CaptionSettingsPatchSchema }),
   z.object({ op: z.literal("setCaptionsEnabled"), enabled: z.boolean() }),
   z.object({ op: z.literal("setCaptionWords"), words: z.array(WordSchema) }),
   z.object({ op: z.literal("replaceWordText"), wordIndex: z.number().int().nonnegative(), text: z.string() }),
   z.object({ op: z.literal("addGraphic"), item: GraphicItemSchema.partial({ id: true }) }),
-  z.object({ op: z.literal("updateGraphic"), itemId: z.string(), patch: GraphicItemSchema.partial().omit({ id: true }) }),
+  z.object({ op: z.literal("updateGraphic"), itemId: z.string(), patch: GraphicItemPatchSchema }),
   z.object({ op: z.literal("deleteGraphic"), itemId: z.string() }),
   z.object({ op: z.literal("setColorPreset"), preset: z.enum(COLOR_PRESETS) }),
   z.object({ op: z.literal("setGlobal"), patch: z.object({ grain: z.number().min(0).max(1).optional(), vignette: z.number().min(0).max(1).optional() }) }),
@@ -287,7 +322,15 @@ export function applyOp(input: EditScript, rawOp: EditOp): EditScript {
     }
     case "updateAudioClip": {
       const { clip } = findAudioClip(script, op.clipId);
-      Object.assign(clip, op.patch);
+      for (const [k, v] of Object.entries(op.patch)) {
+        if (v === undefined) continue;
+        if (k === "outMs" && v === null) {
+          clip.outMs = undefined;
+          continue;
+        }
+        (clip as unknown as Record<string, unknown>)[k] = v;
+      }
+      if (clip.outMs !== undefined && clip.outMs <= clip.inMs) throw new OpError("outMs must be greater than inMs");
       break;
     }
     case "deleteAudioClip": {
@@ -307,7 +350,8 @@ export function applyOp(input: EditScript, rawOp: EditOp): EditScript {
     }
     case "setCaptionSettings": {
       const t = captionTrack(script);
-      t.settings = CaptionSettingsSchema.parse({ ...t.settings, ...op.settings });
+      const patch = Object.fromEntries(Object.entries(op.settings).filter(([, v]) => v !== undefined));
+      t.settings = CaptionSettingsSchema.parse({ ...t.settings, ...patch });
       break;
     }
     case "setCaptionsEnabled": {
@@ -333,7 +377,9 @@ export function applyOp(input: EditScript, rawOp: EditOp): EditScript {
       const t = graphicsTrack(script);
       const item = t.items.find((i) => i.id === op.itemId);
       if (!item) throw new OpError(`Graphic not found: ${op.itemId}`);
-      Object.assign(item, { ...op.patch, props: { ...item.props, ...(op.patch.props ?? {}) } });
+      const { props, ...rest } = op.patch;
+      for (const [k, v] of Object.entries(rest)) if (v !== undefined) (item as unknown as Record<string, unknown>)[k] = v;
+      if (props) item.props = { ...item.props, ...props };
       break;
     }
     case "deleteGraphic": {

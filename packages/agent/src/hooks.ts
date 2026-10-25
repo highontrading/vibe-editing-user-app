@@ -22,6 +22,9 @@ export function scoreHookText(text: string, opts: { startMs?: number } = {}): nu
   let score = 1;
   if (/\?\s*$/.test(t)) score += 2.2;
   if (/\d/.test(t)) score += 2;
+  else if (/\b(one|two|three|four|five|six|seven|eight|nine|ten|hundred|thousand|million|half|double|triple)\b/i.test(lower)) score += 1.5;
+  // List items ("the third mistake…", "number two is…") depend on context: weak openers.
+  if (/^(?:and |so |ok(?:ay)? |then |now )?(?:the |my |our )?(?:first|second|third|fourth|fifth|next|another|last|final)(?:ly)?\b|\bnumber (?:one|two|three|four|five|\d+)\b|^(?:mistake|tip|step|reason|point|rule) (?:number )?\w+\b/i.test(lower)) score -= 2;
   if (/\b(you|your|you're|yours)\b/i.test(t)) score += 1.5;
   if (/\b(i|we)\b/i.test(t) && /\b(learned|lost|made|spent|tried|failed|quit)\b/i.test(t)) score += 1.2;
   let power = 0;
@@ -31,8 +34,13 @@ export function scoreHookText(text: string, opts: { startMs?: number } = {}): nu
   if (words.length >= 4 && words.length <= 14) score += 1.5;
   else if (words.length > 24) score -= 2;
   else if (words.length < 3) score -= 1.5;
-  if (WEAK_OPENERS.test(t)) score -= 2.5;
-  if (/\b(this video|in this video|today we)\b/i.test(lower)) score -= 1;
+  if (WEAK_OPENERS.test(t)) score -= 4;
+  // Audience-wide claims make great cold opens; lines that lean on what came before do not.
+  if (/^(most|every|nobody|no one|everyone|everybody|all)\b/i.test(t)) score += 1.5;
+  if (/^(here'?s what|here is what|so that'?s|that'?s why|and that|which is why|this is why|now,? |but |because |and so)/i.test(t)) score -= 2;
+  if (/\b(this video|in this video|today (we|i)|i want to show|let me show|i'?m going to (show|tell|share)|welcome back)\b/i.test(lower)) score -= 1.5;
+  const fillers = (lower.match(/\b(um+|uh+|erm)\b/g) ?? []).length;
+  score -= fillers * 1.2;
   if (opts.startMs !== undefined) {
     if (opts.startMs <= 60_000) score += 1;
     if (opts.startMs <= 10_000) score += 0.5;

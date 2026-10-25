@@ -10,6 +10,7 @@ import {
   ASPECTS,
   CAPTION_STYLE_IDS,
   CAPTION_STYLES,
+  CaptionSettingsSchema,
   COLOR_PRESETS,
   emptyScript,
   getTrack,
@@ -26,6 +27,8 @@ import {
   type Aspect,
   type AssetAnalysis,
   type AssetRef,
+  type AudioClip,
+  type CaptionSettings,
   type CaptionStyleId,
   type ColorPreset,
   type EditOp,
@@ -201,6 +204,25 @@ export class OpRecorder {
   }
 }
 
+/**
+ * edl's `setCaptionSettings` and `updateAudioClip` parse their partial payloads with
+ * zod `.partial()`, which re-applies field defaults for anything omitted. Always send
+ * the complete object so untouched fields survive.
+ */
+export function captionSettingsOp(script: EditScript, patch: Partial<CaptionSettings>): EditOp {
+  const cur = getTrack(script, "captions")?.settings ?? CaptionSettingsSchema.parse({});
+  return { op: "setCaptionSettings", settings: { ...cur, ...patch } };
+}
+export function audioClipPatchOp(clip: AudioClip, patch: Partial<Omit<AudioClip, "id">>): EditOp {
+  const { id, ...rest } = clip;
+  return { op: "updateAudioClip", clipId: id, patch: { ...rest, ...patch } };
+}
+
+/** Display text without filler words ("So um today" → "So today"). */
+export function tidy(text: string): string {
+  return text.replace(/\b(um+|uh+|erm|hmm|like,)\s*/gi, "").replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim();
+}
+
 /* ------------------------------------------------------------------ */
 /* Source selection                                                    */
 /* ------------------------------------------------------------------ */
@@ -260,7 +282,7 @@ function subtract(spans: Span[], removals: Span[]): Span[] {
     }
     out = next;
   }
-  return out.filter((s) => s.outMs - s.inMs >= 250);
+  return out.filter((s) => s.outMs - s.inMs >= 450);
 }
 
 function intersect(spans: Span[], range: Span): Span[] {
@@ -341,11 +363,15 @@ export function selectTalkingClips(assets: AgentAsset[], params: BuildParams, st
     if (bestHook && bestHook.asset.ref.id === a.ref.id) {
       const h = bestHook.hook;
       const range = { inMs: Math.max(0, h.startMs - 80), outMs: Math.min(dur, h.endMs + 120) };
-      const pieces = intersect(spans, range);
+      let pieces = intersect(spans, range);
+      // A filler removed right after the first word leaves a stub ("So" | "um" | …): drop leading stubs.
+      while (pieces.length > 1 && pieces[0]!.outMs - pieces[0]!.inMs < 700) pieces = pieces.slice(1);
       if (pieces.length) {
-        hookClips = pieces.map((p, i) => ({ ...p, assetId: a.ref.id, isHook: true, reason: i === 0 ? `Opened with your line "${truncate(h.text, 60)}" (hook score ${h.score.toFixed(1)})` : "Rest of the hook line" }));
+        const text = params.cuts.removeFillers ? tidy(h.text) : h.text;
+        hookClips = pieces.map((p, i) => ({ ...p, assetId: a.ref.id, isHook: true, reason: i === 0 ? `Opened with your line "${truncate(text, 60)}" (hook score ${h.score.toFixed(1)})` : "Rest of the hook line" }));
         spans = subtract(spans, [range]);
-        stats.hookText = h.text;
+        gapReasons.set(range.outMs, "Continues after the hook line, which now opens the video");
+        stats.hookText = text;
         stats.hookSourceMs = h.startMs;
       }
     }
@@ -369,10 +395,16 @@ export function selectTalkingClips(assets: AgentAsset[], params: BuildParams, st
     let prevOut = -1;
     for (const s of spans) {
       let reason = "Kept";
+      const near = (at: number) => {
+        let best: string | undefined;
+        let bestD = 201;
+        for (const [k, v] of gapReasons) if (Math.abs(k - at) < bestD) (bestD = Math.abs(k - at)), (best = v);
+        return best;
+      };
       if (prevOut >= 0) {
         if (s.inMs - prevOut <= 1) reason = "Jump cut on a sentence break";
-        else reason = gapReasons.get(s.inMs) ?? `Cut ${((s.inMs - prevOut) / 1000).toFixed(1)} s`;
-      } else if (s.inMs > 0) reason = gapReasons.get(s.inMs) ?? `Trimmed ${(s.inMs / 1000).toFixed(1)} s off the start`;
+        else reason = near(s.inMs) ?? `Cut ${((s.inMs - prevOut) / 1000).toFixed(1)} s`;
+      } else if (s.inMs > 0) reason = near(s.inMs) ?? `Trimmed ${(s.inMs / 1000).toFixed(1)} s off the start`;
       clips.push({ ...s, assetId: a.ref.id, reason });
       prevOut = s.outMs;
     }
@@ -566,8 +598,9 @@ export function brollQuery(words: { text: string }[], fallback = "abstract backg
   const freq = new Map<string, number>();
   for (const w of words) {
     const clean = w.text.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
-    if (clean.length < 4 || STOPWORDS.has(clean) || /^(really|thing|things|something|people|going|gonna|right|okay|actually|because|about|would|could|should|there|their|where|which|every|still|other|those|these|being|think|know|like|want|make|made|much|many|even|also|well|back|first|need|time|year|years|good|great|little|lot)$/.test(clean)) continue;
-    freq.set(clean, (freq.get(clean) ?? 0) + 1 + (w.text[0] === w.text[0]?.toUpperCase() && /^\p{L}/u.test(w.text) ? 0.5 : 0) + clean.length / 20);
+    if (clean.length < 4 || STOPWORDS.has(clean) || /^(really|thing|things|something|everything|anything|nothing|someone|everyone|anyone|people|going|gonna|right|okay|actually|because|about|would|could|should|there|their|where|which|every|still|other|those|these|being|think|know|like|want|make|made|much|many|even|also|well|back|first|need|time|year|years|good|great|little|lot|next|last|here|today|video|follow|exact|changed|alone|moment|instead)$/.test(clean)) continue;
+    const verbish = /(ed|ing|ly|es)$/.test(clean) ? 0.4 : 1;
+    freq.set(clean, (freq.get(clean) ?? 0) + (1 + (w.text[0] === w.text[0]?.toUpperCase() && /^\p{L}/u.test(w.text) ? 0.5 : 0) + clean.length / 20) * verbish);
   }
   const top = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k]) => k);
   return top.length ? top.join(" ") : fallback;
@@ -596,7 +629,7 @@ export function normalizeEnds(rec: OpRecorder): void {
     if (t.kind === "audio" && t.role === "music") {
       for (const c of t.clips) {
         const want = Math.max(1000, dur - c.startMs);
-        if (c.outMs !== want) rec.apply({ op: "updateAudioClip", clipId: c.id, patch: { outMs: want } });
+        if (c.outMs !== want) rec.apply(audioClipPatchOp(c, { outMs: want }));
       }
     }
   }
@@ -729,11 +762,9 @@ async function buildTalking(ctx: ProjectContext, assets: AgentAsset[], params: B
   clips.forEach((c, i) => {
     const outDur = Math.round((c.outMs - c.inMs) / speed);
     let reason = c.reason;
-    let punch = false;
     if (params.pacing.enabled && i > 0 && !clips[i - 1]!.isHook === !c.isHook && sinceToggle >= params.pacing.punchInEvery) {
       scale = scale === 1 ? params.pacing.punchInScale : 1;
       sinceToggle = 0;
-      punch = true;
       reason += scale > 1 ? ` · punch-in to ${Math.round(scale * 100)}% to reset attention` : " · back to full frame";
       stats.punchIns++;
       punchAt.push(cursor);
@@ -758,7 +789,6 @@ async function buildTalking(ctx: ProjectContext, assets: AgentAsset[], params: B
     }
     cursor += outDur;
     sinceToggle += outDur;
-    void punch;
   });
   const duration = rec.script.output.durationMs;
 
@@ -766,7 +796,7 @@ async function buildTalking(ctx: ProjectContext, assets: AgentAsset[], params: B
   if (params.captions.enabled) {
     const words = captionWordsForScript(rec.script, assets, { emoji: params.captions.emoji });
     rec.apply({ op: "setCaptionStyle", style: params.captions.style });
-    rec.apply({ op: "setCaptionSettings", settings: captionSettingsFor(params.captions.style, params.captions, params.platform) });
+    rec.apply({ op: "setCaptionSettings", settings: CaptionSettingsSchema.parse(captionSettingsFor(params.captions.style, params.captions, params.platform)) });
     rec.apply({ op: "setCaptionWords", words });
     stats.captionWords = words.length;
     stats.captionStyle = params.captions.style;
@@ -832,7 +862,6 @@ async function buildTalking(ctx: ProjectContext, assets: AgentAsset[], params: B
     const main = mainClips(rec.script);
     const words = getTrack(rec.script, "captions")?.words ?? [];
     let since = -4000; // leave the hook clear
-    let lastEnd = 0;
     for (const c of main) {
       const d = clipDuration(c);
       since += d;
@@ -844,11 +873,9 @@ async function buildTalking(ctx: ProjectContext, assets: AgentAsset[], params: B
         if (ok) {
           stats.brollCount++;
           since = 0;
-          lastEnd = at + params.broll.durationMs;
         }
       }
     }
-    void lastEnd;
   }
 }
 
@@ -904,7 +931,6 @@ async function buildMontage(ctx: ProjectContext, assets: AgentAsset[], params: B
       continue;
     }
     const id = newId("clip");
-    const section = Math.floor(i / 4);
     const effects = params.montage.zoomPulse ? [{ type: "zoomPulse" as const, params: { amount: 0.06, bpm } }] : [];
     rec.apply({
       op: "addVideoClip",
@@ -914,7 +940,6 @@ async function buildMontage(ctx: ProjectContext, assets: AgentAsset[], params: B
       const type: TransitionType = params.montage.flashOnSection && i % 8 === 0 ? "flash" : i % 4 === 0 ? (params.cuts.transitions !== "cut" ? params.cuts.transitions : "whip") : "cut";
       if (type !== "cut") rec.apply({ op: "setTransition", clipId: id, side: "in", transition: { type, durationMs: type === "flash" ? 150 : 250 } });
     }
-    void section;
     cursor += outMs - m.inMs;
     i++;
     if (i > count * 2) break;
@@ -965,7 +990,7 @@ export function summarizeBuild(stats: BuildStats): string {
     parts.push(`Cut a ${fmtSec(stats.durationMs)} s beat-synced montage from ${stats.clips} moments`);
     if (stats.musicMood) parts.push(`${moodName(stats.musicMood)} track leading`);
   } else {
-    if (stats.hookText) parts.push(`Opened with your line "${truncate(stats.hookText, 50)}"`);
+    if (stats.hookText) parts.push(`Opened with your line "${truncate(tidy(stats.hookText), 50)}"`);
     const cuts: string[] = [];
     if (stats.silencesCut) cuts.push(`${stats.silencesCut} pause${stats.silencesCut === 1 ? "" : "s"}`);
     if (stats.fillersCut) cuts.push(`${stats.fillersCut} filler word${stats.fillersCut === 1 ? "" : "s"}`);

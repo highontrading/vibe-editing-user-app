@@ -142,13 +142,15 @@ export const EndCard: React.FC<GraphicProps> = ({ props }) => {
   const pulse = 1 + Math.sin((t.frame / t.fps) * 3.2) * 0.025;
   const ringR = lerp(u * 20, u * 70, t.enter);
   const words = headline.split(/\s+/);
-  const fontSize = clamp((t.width * 0.8) / Math.max(words.reduce((m, w) => Math.max(m, w.length), 1) * 0.5, 1), u * 8, u * 15);
+  const longest = words.reduce((m, w) => Math.max(m, w.length), 1);
+  // Fit the longest word on one line and the whole headline on at most two lines.
+  const fontSize = clamp(Math.min((t.width * 0.8) / (longest * 0.5), (t.width * 1.6) / (headline.length * 0.5)), u * 8, u * 15);
   return (
     <Fill style={{ background, opacity: Math.min(1, t.enter * 1.4) * (1 - t.exit), alignItems: "center", justifyContent: "center" }}>
       <div style={{ position: "absolute", width: ringR * 2, height: ringR * 2, borderRadius: "50%", border: `${u * 0.5}px solid ${withAlpha(accent, 0.18)}`, left: t.width / 2 - ringR, top: t.height / 2 - ringR }} />
       <div style={{ position: "absolute", width: ringR * 1.4, height: ringR * 1.4, borderRadius: "50%", background: `radial-gradient(circle, ${withAlpha(accent, 0.22)} 0%, transparent 70%)`, left: t.width / 2 - ringR * 0.7, top: t.height / 2 - ringR * 0.7 }} />
       <div style={{ textAlign: "center", transform: `scale(${(lerp(0.8, 1, t.enter) * pulse).toFixed(3)})`, padding: `0 ${u * 6}px` }}>
-        <div style={{ fontFamily: font, fontSize, color: "#fff", textTransform: "uppercase", lineHeight: 1, textShadow: `0 ${u}px ${u * 3}px rgba(0,0,0,0.6)`, letterSpacing: "0.01em" }}>{headline}</div>
+        <div style={{ fontFamily: font, fontSize, color: "#fff", textTransform: "uppercase", lineHeight: 1.06, textShadow: `0 ${u}px ${u * 3}px rgba(0,0,0,0.6)`, letterSpacing: "0.01em" }}>{headline}</div>
         {handle ? (
           <div style={{ display: "inline-block", marginTop: u * 4, background: accent, color: luminance(accent) > 0.5 ? "#111" : "#fff", fontFamily: sub, fontWeight: 800, fontSize: u * 4.4, padding: `${u * 1.4}px ${u * 4}px`, borderRadius: 999, transform: `translateY(${lerp(u * 6, 0, t.enter).toFixed(1)}px)`, boxShadow: `0 ${u}px ${u * 3}px ${withAlpha(accent, 0.45)}` }}>
             {handle.startsWith("@") ? handle : `@${handle}`}

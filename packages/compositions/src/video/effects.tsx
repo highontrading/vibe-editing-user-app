@@ -58,8 +58,8 @@ export function rampProgress(t: number, from: number, to: number): number {
 
 const GRAIN_SEEDS = 7;
 const grainTile = (seed: number, size = 220): string => {
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='${seed}' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>`;
-  return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg).replace(/%23/g, "%23")}")`;
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='${seed}' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(#n)'/></svg>`;
+  return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
 };
 const GRAIN_TILES = Array.from({ length: GRAIN_SEEDS }, (_, i) => grainTile(i + 1));
 

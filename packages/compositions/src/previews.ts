@@ -12,7 +12,7 @@ import {
 
 /** A self-contained gradient image (data URI) usable as an `image` asset: no network needed. */
 export function gradientImageUrl(from: string, to: string, angle = 135, width = 1080, height = 1920): string {
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${width}' height='${height}' viewBox='0 0 ${width} ${height}'><defs><linearGradient id='g' gradientTransform='rotate(${angle} 0.5 0.5)'><stop offset='0' stop-color='${from}'/><stop offset='1' stop-color='${to}'/></linearGradient><radialGradient id='r' cx='0.5' cy='0.42' r='0.6'><stop offset='0' stop-color='white' stop-opacity='0.16'/><stop offset='1' stop-color='white' stop-opacity='0'/></radialGradient></defs><rect width='100%' height='100%' fill='url(%23g)'/><rect width='100%' height='100%' fill='url(%23r)'/></svg>`;
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${width}' height='${height}' viewBox='0 0 ${width} ${height}'><defs><linearGradient id='g' gradientTransform='rotate(${angle} 0.5 0.5)'><stop offset='0' stop-color='${from}'/><stop offset='1' stop-color='${to}'/></linearGradient><radialGradient id='r' cx='0.5' cy='0.42' r='0.6'><stop offset='0' stop-color='white' stop-opacity='0.16'/><stop offset='1' stop-color='white' stop-opacity='0'/></radialGradient></defs><rect width='100%' height='100%' fill='url(#g)'/><rect width='100%' height='100%' fill='url(#r)'/></svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 

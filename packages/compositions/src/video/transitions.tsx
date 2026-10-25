@@ -86,7 +86,7 @@ export function boundaryTransition(type: TransitionType, p: number, width: numbe
       return { incoming: t < rise ? HIDDEN : IDENTITY, outgoing: IDENTITY, overlay: { color: "#fff", opacity: o }, showOutgoing: t < rise };
     }
     case "glitch": {
-      const amp = (1 - easeOutCubic(t)) * width * 0.03;
+      const amp = (1 - easeOutCubic(t)) * width * 0.045;
       const j = jitter(seed, frame, "g");
       const swap = t < 0.45 && seeded(seed, `swap:${frame}`) > 0.55;
       return {

@@ -5,12 +5,13 @@
  */
 import type Anthropic from "@anthropic-ai/sdk";
 import { env } from "@vibe/core";
-import { CAPTION_STYLE_IDS, COLOR_PRESETS, MUSIC_MOODS, TRANSITION_TYPES, clipDuration, getTrack, mainClips, type EditScript, type TransitionType } from "@vibe/edl";
+import { CAPTION_STYLE_IDS, COLOR_PRESETS, MUSIC_MOODS, getTrack, mainClips, type EditScript, type TransitionType } from "@vibe/edl";
 import type { ChatTurn, EditResult, MediaProvider, ProjectContext } from "./types";
 import { BETAS, FALLBACKS, getClient, stopIssue, systemBlocks, textOf, warn } from "./client";
 import { buildManifest, fmtSec } from "./manifest";
 import { EditSession, describeScriptState, findPhrase, makeTools } from "./tools";
-import { addBroll, addSfx, brollQuery, capitalize, captionSettingsFor, normalizeEnds, setMusic, trimScriptToTarget, truncate } from "./builder";
+import { addBroll, addSfx, audioClipPatchOp, brollQuery, capitalize, captionSettingsFor, captionSettingsOp, normalizeEnds, setMusic, trimScriptToTarget, truncate } from "./builder";
+import { CaptionSettingsSchema } from "@vibe/edl";
 import { selfCheckSync } from "./check";
 import { quickSuggestions } from "./suggestions";
 import { COLOR_ALIASES, COLOR_NAMES, MOOD_ALIASES, STYLE_ALIASES, findAlias, parseDurationMs, parseTimestamp, quoted } from "./lexicon";
@@ -77,7 +78,7 @@ async function claudeEdit(ctx: ProjectContext, script: EditScript, instruction: 
   }
   const ops = [...session.ops];
   let summary = session.finish?.summary ?? (session.log.length ? capitalize(session.log.join(", ")) + "." : "No changes made.");
-  let message = session.finish?.message ?? textOf(last) ?? summary;
+  let message = session.finish?.message || textOf(last) || summary;
   if (issue) message = `${issue} ${session.log.length ? `I applied these changes before stopping: ${session.log.join(", ")}.` : "Nothing was changed."}`;
   const check = selfCheckSync(session.script, ctx);
   ops.push(...check.ops);
@@ -117,10 +118,10 @@ export async function mockEdit(ctx: ProjectContext, script: EditScript, instruct
         did.push("removed the music");
       } else notes.push("There was no music to remove.");
     } else if (/\b(quieter|lower|softer|down|too loud|less loud|reduce)\b/.test(l) && musicClips().length) {
-      for (const c of musicClips()) session.apply({ op: "updateAudioClip", clipId: c.id, patch: { gainDb: Math.max(-40, c.gainDb - 4), ducking: true } });
+      for (const c of musicClips()) session.apply(audioClipPatchOp(c, { gainDb: Math.max(-40, c.gainDb - 4), ducking: true }));
       did.push("turned the music down 4 dB");
     } else if (/\b(louder|up|more|boost|higher)\b/.test(l) && musicClips().length && !findAlias(l, MOOD_ALIASES, MUSIC_MOODS)) {
-      for (const c of musicClips()) session.apply({ op: "updateAudioClip", clipId: c.id, patch: { gainDb: Math.min(-6, c.gainDb + 4) } });
+      for (const c of musicClips()) session.apply(audioClipPatchOp(c, { gainDb: Math.min(-6, c.gainDb + 4) }));
       did.push("turned the music up 4 dB");
     } else {
       const mood = findAlias(l, MOOD_ALIASES, MUSIC_MOODS) ?? (/\b(add|put|some|with)\b/.test(l) && !musicClips().length ? (hasSpeech() ? "lofi" : "energetic") : undefined);
@@ -149,7 +150,7 @@ export async function mockEdit(ctx: ProjectContext, script: EditScript, instruct
       }
       if (styleHit && styleHit !== caps?.style) {
         session.apply({ op: "setCaptionStyle", style: styleHit });
-        session.apply({ op: "setCaptionSettings", settings: captionSettingsFor(styleHit, {}, platform) });
+        session.apply({ op: "setCaptionSettings", settings: CaptionSettingsSchema.parse(captionSettingsFor(styleHit, {}, platform)) });
         did.push(`switched captions to ${styleHit.replace("-", " ")}`);
       }
       const cur = getTrack(s(), "captions")?.settings;
@@ -175,7 +176,7 @@ export async function mockEdit(ctx: ProjectContext, script: EditScript, instruct
       else if (/\bone word at a time\b/.test(l)) settings.mode = "word";
       else if (/\b(full lines?|whole sentences?|line by line)\b/.test(l)) settings.mode = "line";
       if (Object.keys(settings).length) {
-        session.apply({ op: "setCaptionSettings", settings });
+        session.apply(captionSettingsOp(s(), settings));
         const bits: string[] = [];
         if (settings.fontSize) bits.push(`size ${settings.fontSize}`);
         if (settings.color) bits.push(`${colorsInText[0]} text`);
@@ -369,7 +370,7 @@ export async function mockEdit(ctx: ProjectContext, script: EditScript, instruct
 
   // 10. Colour grade
   if (/\b(grade|grading|colou?r|look|filter|lut|tone|black and white|b&w|monochrome|vibrant|warm film|moody|teal|cinematic look|vintage|desaturat)/.test(l) && !mentionsCaptions) {
-    const preset = /\b(remove|no|without|reset|ungraded)\b[^.]{0,10}\b(grade|colou?r|filter|lut|look)\b/.test(l) ? "none" : findAlias(l.replace(/\b(music|track)\b[^.]*/g, ""), COLOR_ALIASES, COLOR_PRESETS);
+    const preset = /\b(remove|no|without|reset|ungraded)\b[^.]{0,10}\b(grade|colou?r|filter|lut|look)\b/.test(l) ? "none" : findAlias(l.replace(/\b(music|track|song|soundtrack|bed)\b\s*(to|into|for)?\s*(a|an|the|some)?\s*[\w-]+/g, " "), COLOR_ALIASES, COLOR_PRESETS);
     if (preset && preset !== s().global.colorPreset) {
       session.apply({ op: "setColorPreset", preset });
       session.apply({ op: "setGlobal", patch: { grain: preset === "warm-film" ? 0.15 : 0, vignette: preset === "moody" || preset === "teal-orange" ? 0.2 : 0 } });
@@ -479,4 +480,3 @@ function finish(session: EditSession, did: string[], message: string, ctx: Proje
   return { script: check.script, ops, summary: check.fixed.length ? `${sum} Also ${check.fixed.join(", ")}.` : sum, message, suggestions: quickSuggestions(check.script), checks: check.checks };
 }
 
-export { clipDuration };

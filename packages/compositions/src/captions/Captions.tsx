@@ -26,22 +26,37 @@ interface StyleDef {
   strokeWidth: (size: number) => number;
 }
 
+/** Horizontal padding of each word, in em. */
+const WORD_PAD = 0.2;
+
+/** Rough average glyph width per font (em), used to shrink lines that would overflow. */
+const CHAR_WIDTH: Record<FontKey, number> = { anton: 0.42, "archivo-black": 0.74, montserrat: 0.68, inter: 0.58, "jetbrains-mono": 0.6, "bebas-neue": 0.4, poppins: 0.66, caveat: 0.46 };
+
+/** Shrink the font (down to 65%) so a line fits the available width on one row where possible. */
+export function fitFontSize(line: CaptionLine, def: StyleDef, fontSize: number, maxWidth: number, uppercase: boolean, emoji: boolean): number {
+  const chars = line.words.reduce((n, w) => n + w.text.length, 0);
+  const emojis = emoji ? line.words.filter((w) => w.emoji).length : 0;
+  const est = chars * fontSize * CHAR_WIDTH[def.font] * (uppercase ? 1.08 : 1) * (1 + (def.popScale - 1)) + line.words.length * fontSize * (WORD_PAD * 2 + 0.06) + emojis * fontSize * 1.3;
+  if (est <= maxWidth) return fontSize;
+  return fontSize * Math.max(0.65, maxWidth / est);
+}
+
 const heavyShadow = (_: string, s: number) => `0 ${Math.round(s * 0.06)}px 0 rgba(0,0,0,0.9), 0 ${Math.round(s * 0.12)}px ${Math.round(s * 0.35)}px rgba(0,0,0,0.55)`;
 const softShadow = (_: string, s: number) => `0 ${Math.round(s * 0.04)}px ${Math.round(s * 0.18)}px rgba(0,0,0,0.6)`;
 const noShadow = () => "none";
 
 const STYLE_DEFS: Record<CaptionStyleId, StyleDef> = {
-  "bold-pop": { font: "anton", weight: 400, letterSpacing: 0.02, sizeScale: 1, lineHeight: 1.08, container: "none", futureOpacity: 1, pastOpacity: 1, popScale: 1.16, textShadow: heavyShadow, strokeWidth: () => 0 },
+  "bold-pop": { font: "anton", weight: 400, letterSpacing: 0.02, sizeScale: 1, lineHeight: 1.08, container: "none", futureOpacity: 1, pastOpacity: 1, popScale: 1.1, textShadow: heavyShadow, strokeWidth: () => 0 },
   "clean-minimal": { font: "inter", weight: 500, letterSpacing: 0, sizeScale: 1, lineHeight: 1.3, container: "none", futureOpacity: 0.55, pastOpacity: 0.85, popScale: 1.0, textShadow: softShadow, strokeWidth: () => 0 },
-  hormozi: { font: "archivo-black", weight: 400, letterSpacing: 0.01, sizeScale: 1, lineHeight: 1.1, container: "none", futureOpacity: 1, pastOpacity: 1, popScale: 1.14, textShadow: (_, s) => `${Math.round(s * 0.05)}px ${Math.round(s * 0.06)}px 0 #000, 0 ${Math.round(s * 0.14)}px ${Math.round(s * 0.3)}px rgba(0,0,0,0.6)`, strokeWidth: (s) => s * 0.035 },
+  hormozi: { font: "archivo-black", weight: 400, letterSpacing: 0.01, sizeScale: 1, lineHeight: 1.1, container: "none", futureOpacity: 1, pastOpacity: 1, popScale: 1.1, textShadow: (_, s) => `${Math.round(s * 0.05)}px ${Math.round(s * 0.06)}px 0 #000, 0 ${Math.round(s * 0.14)}px ${Math.round(s * 0.3)}px rgba(0,0,0,0.6)`, strokeWidth: (s) => s * 0.035 },
   karaoke: { font: "montserrat", weight: 800, letterSpacing: 0, sizeScale: 1, lineHeight: 1.25, container: "none", futureOpacity: 0.9, pastOpacity: 1, popScale: 1.0, textShadow: heavyShadow, strokeWidth: () => 0 },
   typewriter: { font: "jetbrains-mono", weight: 500, letterSpacing: 0, sizeScale: 1, lineHeight: 1.35, container: "mono", futureOpacity: 0, pastOpacity: 1, popScale: 1.0, textShadow: noShadow, strokeWidth: () => 0 },
-  outline: { font: "bebas-neue", weight: 400, letterSpacing: 0.03, sizeScale: 1.1, lineHeight: 1.05, container: "none", futureOpacity: 1, pastOpacity: 1, popScale: 1.12, textShadow: (_, s) => `0 ${Math.round(s * 0.08)}px ${Math.round(s * 0.25)}px rgba(0,0,0,0.55)`, strokeWidth: (s) => s * 0.1 },
+  outline: { font: "bebas-neue", weight: 400, letterSpacing: 0.03, sizeScale: 1.1, lineHeight: 1.05, container: "none", futureOpacity: 1, pastOpacity: 1, popScale: 1.08, textShadow: (_, s) => `0 ${Math.round(s * 0.08)}px ${Math.round(s * 0.25)}px rgba(0,0,0,0.55)`, strokeWidth: (s) => s * 0.1 },
   glow: { font: "montserrat", weight: 700, letterSpacing: 0.01, sizeScale: 1, lineHeight: 1.3, container: "glow", futureOpacity: 0.6, pastOpacity: 0.85, popScale: 1.06, textShadow: noShadow, strokeWidth: () => 0 },
   boxed: { font: "inter", weight: 800, letterSpacing: 0, sizeScale: 1, lineHeight: 1.3, container: "box", futureOpacity: 0.7, pastOpacity: 0.95, popScale: 1.04, textShadow: noShadow, strokeWidth: () => 0 },
   "lower-third": { font: "inter", weight: 500, letterSpacing: 0, sizeScale: 1, lineHeight: 1.35, container: "bar", futureOpacity: 0.7, pastOpacity: 0.9, popScale: 1.0, textShadow: noShadow, strokeWidth: () => 0 },
   "two-line": { font: "inter", weight: 700, letterSpacing: 0, sizeScale: 1, lineHeight: 1.3, container: "none", futureOpacity: 0.8, pastOpacity: 0.9, popScale: 1.04, textShadow: heavyShadow, strokeWidth: () => 0 },
-  "emoji-pop": { font: "poppins", weight: 800, letterSpacing: 0.01, sizeScale: 1, lineHeight: 1.15, container: "none", futureOpacity: 1, pastOpacity: 1, popScale: 1.14, textShadow: heavyShadow, strokeWidth: () => 0 },
+  "emoji-pop": { font: "poppins", weight: 800, letterSpacing: 0.01, sizeScale: 1, lineHeight: 1.15, container: "none", futureOpacity: 1, pastOpacity: 1, popScale: 1.1, textShadow: heavyShadow, strokeWidth: () => 0 },
   handwritten: { font: "caveat", weight: 700, letterSpacing: 0.01, sizeScale: 1.25, lineHeight: 1.2, container: "none", futureOpacity: 0.9, pastOpacity: 1, popScale: 1.06, textShadow: softShadow, strokeWidth: () => 0 },
 };
 
@@ -111,6 +126,8 @@ const WordView: React.FC<WordViewProps> = ({ word, state, styleId, def, settings
   if (emphasised) color = highlight;
   else if (isActive && (wordMode || styleId === "two-line" || styleId === "karaoke" || styleId === "glow")) color = highlight;
 
+  // Reserve room for the pop so a scaled word never collides with its neighbours (layout stays stable).
+  const wordPad = fontSize * (WORD_PAD + (wordMode ? (def.popScale - 1) * 0.5 * CHAR_WIDTH[def.font] * text.length : 0));
   const base: React.CSSProperties = {
     display: "inline-block",
     color,
@@ -121,7 +138,7 @@ const WordView: React.FC<WordViewProps> = ({ word, state, styleId, def, settings
     transform: `translateY(${translateY.toFixed(2)}px) scale(${scale.toFixed(4)})`,
     transformOrigin: "50% 60%",
     whiteSpace: "pre",
-    padding: `0 ${Math.round(fontSize * 0.12)}px`,
+    padding: `0 ${wordPad.toFixed(1)}px`,
     WebkitTextStroke: stroke > 0 ? `${stroke.toFixed(2)}px #000` : undefined,
     paintOrder: stroke > 0 ? "stroke fill" : undefined,
   };
@@ -257,8 +274,10 @@ interface LineViewProps {
   dim?: boolean;
 }
 
-const LineView: React.FC<LineViewProps> = ({ line, styleId, settings, fontSize, tMs, frame, fps, width, fontFamily, dim }) => {
+const LineView: React.FC<LineViewProps> = ({ line, styleId, settings, fontSize: baseFontSize, tMs, frame, fps, width, fontFamily, dim }) => {
   const def = STYLE_DEFS[styleId];
+  const fits = def.container === "bar" || def.container === "mono" || styleId === "two-line" || styleId === "clean-minimal";
+  const fontSize = fits ? baseFontSize : fitFontSize(line, def, baseFontSize, width * 0.9, settings.uppercase, settings.emoji);
   const textColor = safeColor(settings.color, "#FFFFFF");
   const highlight = safeColor(settings.highlightColor, "#FFD400");
   const lineAgeFrames = Math.max(0, ((tMs - line.startMs) / 1000) * fps);
@@ -288,7 +307,7 @@ const LineView: React.FC<LineViewProps> = ({ line, styleId, settings, fontSize, 
     justifyContent: def.container === "bar" || def.container === "mono" ? "flex-start" : "center",
     alignItems: "center",
     textAlign: def.container === "bar" ? "left" : "center",
-    gap: `0 ${Math.round(fontSize * 0.05)}px`,
+    gap: `0 ${Math.round(fontSize * 0.06)}px`,
     maxWidth: def.container === "bar" ? width * 0.92 : width * 0.9,
     fontFamily,
     fontSize,

@@ -116,7 +116,7 @@ function buildSmokeScript(baseUrl: string): EditScript {
     items: [
       { id: "title", component: "KineticTitle", startMs: 100, durationMs: 1400, props: { text: "Stop scrolling", subtitle: "watch this", style: "slam", align: "top" } },
       { id: "bar", component: "ProgressBar", startMs: 0, durationMs: 0, props: { position: "top", thickness: 10 } },
-      { id: "end", component: "EndCard", startMs: 2600, durationMs: 900, props: { headline: "Follow for more", handle: "vibe" } },
+      { id: "end", component: "EndCard", startMs: 3200, durationMs: 800, props: { headline: "Follow for more", handle: "vibe" } },
     ],
   });
   s.tracks.push({ id: "music", kind: "audio", role: "music", muted: false, name: "Music", clips: [{ id: "m1", assetId: "music", startMs: 0, inMs: 0, gainDb: -8, fadeInMs: 300, fadeOutMs: 500, ducking: true, loop: true }] });
@@ -168,7 +168,7 @@ async function main() {
     });
     log("video written", videoOut, `${(fs.statSync(videoOut).size / 1024).toFixed(0)} KB`);
 
-    for (const frame of [20, 48, 85]) {
+    for (const frame of [20, 48, 70, 100]) {
       const output = path.join(outDir, `smoke-f${frame}.png`);
       await renderStill({ ...common, composition, inputProps, frame, output, imageFormat: "png" });
       log("still", output);

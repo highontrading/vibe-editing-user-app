@@ -49,3 +49,21 @@ test("ops validate", () => {
   const s = base();
   assert.throws(() => applyOps(s, [{ op: "trimClip", clipId: "nope", inMs: 0 }]));
 });
+
+test("partial patches do not reset other fields", () => {
+  let s = base();
+  s = applyOp(s, { op: "registerAsset", asset: { id: "m1", kind: "audio", url: "m.mp3", durationMs: 30000, source: "library" } });
+  s = applyOp(s, { op: "addAudioClip", role: "music", clip: { assetId: "m1", startMs: 0, gainDb: -18, ducking: true, fadeInMs: 500 } });
+  const music = s.tracks.find((t) => t.kind === "audio")!;
+  const clipId = music.kind === "audio" ? music.clips[0]!.id : "";
+  s = applyOp(s, { op: "updateAudioClip", clipId, patch: { outMs: 10000 } });
+  const after = s.tracks.find((t) => t.kind === "audio")!;
+  assert.equal(after.kind === "audio" && after.clips[0]!.gainDb, -18);
+  assert.equal(after.kind === "audio" && after.clips[0]!.ducking, true);
+  s = applyOp(s, { op: "setCaptionSettings", settings: { position: "top", uppercase: true } });
+  s = applyOp(s, { op: "setCaptionSettings", settings: { fontSize: 90 } });
+  const caps = s.tracks.find((t) => t.kind === "captions")!;
+  assert.equal(caps.kind === "captions" && caps.settings.position, "top");
+  assert.equal(caps.kind === "captions" && caps.settings.uppercase, true);
+  assert.equal(caps.kind === "captions" && caps.settings.fontSize, 90);
+});
