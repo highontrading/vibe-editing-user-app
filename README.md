@@ -11,5 +11,6 @@ Upload footage, describe the edit, get a finished video. Planning documents live
 | `docs/04-infrastructure-and-costs.md` | Stack choices, vendor prices, per-project and monthly cost model, deployment runbook |
 | `docs/05-build-roadmap.md` | Phased plan from empty repo to launch |
 | `docs/06-risks-legal.md` | Honest risk assessment, licensing, privacy, moderation |
+| `docs/07-feature-design.md` | Screen-by-screen feature design and MVP cut list (the build spec) |
 
 Code starts in Phase 0 of the roadmap.
