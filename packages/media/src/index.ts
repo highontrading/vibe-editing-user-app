@@ -1,1 +1,1 @@
-export * from "./ffmpeg.js";
+export * from "./ffmpeg";

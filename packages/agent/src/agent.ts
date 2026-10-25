@@ -1,7 +1,7 @@
 /** STUB implementations; replaced by the real agent. Keep signatures. */
 import { env } from "@vibe/core";
 import { runChecks, type AssetAnalysis, type EditScript } from "@vibe/edl";
-import type { BuildResult, ChatTurn, EditResult, MediaProvider, PlanResult, ProjectContext } from "./types.js";
+import type { BuildResult, ChatTurn, EditResult, MediaProvider, PlanResult, ProjectContext } from "./types";
 
 export function isMockMode() {
   return env.mockAi;

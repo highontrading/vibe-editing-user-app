@@ -2,7 +2,7 @@
  * Catalogue of everything the AI and the UI can pick from. The compositions
  * package implements each entry. Keep ids in sync with schema.ts constants.
  */
-import type { CaptionStyleId, GraphicComponentId, MusicMood, TransitionType, EffectType, ColorPreset } from "./schema.js";
+import type { CaptionStyleId, GraphicComponentId, MusicMood, TransitionType, EffectType, ColorPreset } from "./schema";
 
 export interface CaptionStyleInfo {
   id: CaptionStyleId;

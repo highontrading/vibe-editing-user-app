@@ -4,7 +4,7 @@
  * (the web app registers @vibe/pipeline's runJob at startup).
  */
 import { prisma, type Job as JobRow } from "@vibe/db";
-import { env } from "./env.js";
+import { env } from "./env";
 
 export const JOB_QUEUE = "vibe-jobs";
 export const RENDER_QUEUE = "vibe-render";

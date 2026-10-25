@@ -1,6 +1,6 @@
 /** Seeds built-in recipes. Safe to re-run (upserts by slug). */
-import { prisma } from "./index.js";
-import { BUILTIN_RECIPES } from "./recipes.js";
+import { prisma } from "./index";
+import { BUILTIN_RECIPES } from "./recipes";
 
 async function main() {
   for (const r of BUILTIN_RECIPES) {

@@ -9,5 +9,5 @@
  *   quickSuggestions(script)              -> string[]        chips under the chat
  *   isMockMode()                          -> boolean
  */
-export * from "./types.js";
-export { createPlan, buildScript, editScript, selfCheck, describeFrames, pickHooks, quickSuggestions, isMockMode } from "./agent.js";
+export * from "./types";
+export { createPlan, buildScript, editScript, selfCheck, describeFrames, pickHooks, quickSuggestions, isMockMode } from "./agent";

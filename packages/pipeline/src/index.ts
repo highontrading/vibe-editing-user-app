@@ -5,6 +5,6 @@
  *   media              -> MediaProvider implementation for the agent (music, sfx, stock, voice)
  *   resolveScriptAssets(script) -> script with asset URLs refreshed (signed URLs / local routes)
  */
-export { runJob } from "./runner.js";
-export { media } from "./media-provider.js";
-export { resolveScriptAssets } from "./assets.js";
+export { runJob } from "./runner";
+export { media } from "./media-provider";
+export { resolveScriptAssets } from "./assets";

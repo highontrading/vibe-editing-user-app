@@ -16,8 +16,8 @@ import {
   type EditScript,
   type Track,
   type VideoClip,
-} from "./schema.js";
-import { computeDuration, newId } from "./helpers.js";
+} from "./schema";
+import { computeDuration, newId } from "./helpers";
 
 const ms = z.number().int().nonnegative();
 

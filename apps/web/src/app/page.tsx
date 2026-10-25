@@ -1,3 +1,8 @@
-export default function Page() {
-  return <main className="p-10 font-display text-4xl">Vibe Editor</main>;
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
+
+export default async function RootPage() {
+  const session = await auth();
+  if (session?.user?.id) redirect("/home");
+  redirect("/login");
 }

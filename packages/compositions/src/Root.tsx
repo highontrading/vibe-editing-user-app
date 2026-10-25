@@ -1,7 +1,7 @@
 import React from "react";
 import { Composition } from "remotion";
 import { emptyScript, type EditScript } from "@vibe/edl";
-import { COMPOSITION_ID, EditScriptComposition, getCompositionMetadata } from "./EditScriptComposition.js";
+import { COMPOSITION_ID, EditScriptComposition, getCompositionMetadata } from "./EditScriptComposition";
 
 export const RemotionRoot: React.FC = () => {
   const defaultScript = emptyScript({ aspect: "9:16", title: "Preview" });

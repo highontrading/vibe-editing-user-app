@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import os from "node:os";
 import path from "node:path";
 import fsp from "node:fs/promises";
-import { ffmpeg, ffprobe, synthAudio, detectSilences } from "./ffmpeg.js";
+import { ffmpeg, ffprobe, synthAudio, detectSilences } from "./ffmpeg";
 
 test("ffmpeg produces a test clip and probe reads it", async () => {
   const dir = await fsp.mkdtemp(path.join(os.tmpdir(), "vibe-media-"));

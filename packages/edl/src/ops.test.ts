@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { applyOp, applyOps, emptyScript, mainClips, runChecks, scriptSummary } from "./index.js";
+import { applyOp, applyOps, emptyScript, mainClips, runChecks, scriptSummary } from "./index";
 
 function base() {
   let s = emptyScript({ aspect: "9:16" });

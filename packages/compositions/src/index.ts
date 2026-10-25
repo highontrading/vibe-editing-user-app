@@ -6,6 +6,6 @@
  *   - getCompositionMetadata(script): { width, height, fps, durationInFrames }
  *   - CAPTION_PREVIEW_SCRIPT(styleId): small script used by the caption style gallery
  */
-export { COMPOSITION_ID, EditScriptComposition, getCompositionMetadata } from "./EditScriptComposition.js";
-export type { EditScriptCompositionProps } from "./EditScriptComposition.js";
-export { captionPreviewScript } from "./previews.js";
+export { COMPOSITION_ID, EditScriptComposition, getCompositionMetadata } from "./EditScriptComposition";
+export type { EditScriptCompositionProps } from "./EditScriptComposition";
+export { captionPreviewScript } from "./previews";

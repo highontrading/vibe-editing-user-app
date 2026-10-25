@@ -1,4 +1,4 @@
-import { EditScriptSchema, type Aspect, type EditScript, type Platform, type Track, type VideoClip } from "./schema.js";
+import { EditScriptSchema, type Aspect, type EditScript, type Platform, type Track, type VideoClip } from "./schema";
 
 let counter = 0;
 export function newId(prefix = "id"): string {
