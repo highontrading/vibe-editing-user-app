@@ -17,6 +17,10 @@ export const POST = route(async (_req: Request, ctx: { params: Promise<{ id: str
   const storage = getStorage();
   if (!(await storage.exists(a.storageKey))) throw new ApiError(400, "Upload not found in storage");
   const updated = await prisma.asset.update({ where: { id }, data: { status: "UPLOADED", error: null } });
+  if (a.projectId) {
+    // Footage arriving in a fresh project means we are now understanding it; analyze enqueues the plan when all assets are READY.
+    await prisma.project.updateMany({ where: { id: a.projectId, status: "DRAFTING" }, data: { status: "ANALYZING", statusMessage: "Understanding your footage" } });
+  }
   await ensureJobRunner();
   let job = null;
   try {

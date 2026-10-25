@@ -1,4 +1,17 @@
 import path from "node:path";
+import fs from "node:fs";
+
+/** Repo root (directory containing pnpm-workspace.yaml), so relative DATA_DIR is the same for web, worker and scripts. */
+function workspaceRoot(): string {
+  let dir = process.cwd();
+  for (let i = 0; i < 8; i++) {
+    if (fs.existsSync(path.join(dir, "pnpm-workspace.yaml"))) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return process.cwd();
+}
 
 function str(name: string, fallback = ""): string {
   const v = process.env[name];
@@ -9,7 +22,10 @@ export const env = {
   get nodeEnv() { return str("NODE_ENV", "development"); },
   get isProd() { return this.nodeEnv === "production"; },
   get appUrl() { return str("APP_URL", "http://localhost:3000").replace(/\/$/, ""); },
-  get dataDir() { return path.resolve(str("DATA_DIR", "./data")); },
+  get dataDir() {
+    const raw = str("DATA_DIR", "./data");
+    return path.isAbsolute(raw) ? raw : path.resolve(workspaceRoot(), raw);
+  },
   get redisUrl() { return str("REDIS_URL"); },
   get s3() {
     const bucket = str("S3_BUCKET");
