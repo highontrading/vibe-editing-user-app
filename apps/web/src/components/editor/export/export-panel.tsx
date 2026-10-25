@@ -15,7 +15,7 @@ export function ExportPanel() {
   const setExports = useEditor((s) => s.setExports);
   const set = useEditor((s) => s.set);
   const active = exports.some((e) => e.status === "QUEUED" || e.status === "RUNNING");
-  useSWR<{ exports: ExportView[] }>(`/api/projects/${projectId}/exports`, fetcher, {
+  const { isLoading } = useSWR<{ exports: ExportView[] }>(`/api/projects/${projectId}/exports`, fetcher, {
     refreshInterval: active ? 2000 : 0,
     onSuccess: (d) => setExports(d.exports),
   });
@@ -26,7 +26,10 @@ export function ExportPanel() {
         <IconButton title="Close" onClick={() => set({ exportPanelOpen: false })}><X className="h-3.5 w-3.5" /></IconButton>
       </div>
       <div className="flex-1 overflow-y-auto p-2">
-        {exports.length === 0 && (
+        {exports.length === 0 && isLoading && (
+          <div className="flex items-center justify-center gap-2 p-4 text-xs text-muted"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading exports…</div>
+        )}
+        {exports.length === 0 && !isLoading && (
           <div className="p-4 text-center text-xs text-muted">
             No exports yet.
             <button type="button" onClick={() => set({ exportOpen: true, exportPanelOpen: false })} className="ml-1 text-accent hover:underline">Export your edit</button>

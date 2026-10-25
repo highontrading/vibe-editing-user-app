@@ -2,6 +2,7 @@ import { z } from "zod";
 import { applyOps, MUSIC_MOODS, getTrack, type EditOp } from "@vibe/edl";
 import { route, json, parseBody, serialize } from "@/lib/api";
 import { requireUserId } from "@/lib/session";
+import { loadPipeline } from "@/lib/jobs";
 import { createVersion, currentScript, getOwnedProject, toVersionView } from "@/lib/editor/project-service";
 import { resolveScriptUrls } from "@/lib/editor/urls";
 
@@ -26,7 +27,7 @@ export const POST = route(async (req: Request, ctx: Ctx) => {
   for (const c of music?.clips ?? []) ops.push({ op: "deleteAudioClip", clipId: c.id });
   let label = "Music removed";
   if (body.mood) {
-    const { media } = await import("@vibe/pipeline");
+    const { media } = await loadPipeline();
     const ref = await media.getMusic({ mood: body.mood, durationMs: script.output.durationMs, projectId: id });
     ops.push({ op: "registerAsset", asset: ref });
     ops.push({

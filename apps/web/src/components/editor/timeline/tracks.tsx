@@ -34,14 +34,12 @@ export function reorderOps(script: EditScript, trackId: string, clipId: string, 
   const dragged = ordered.find((c) => c.id === clipId);
   if (!dragged) return [];
   const others = ordered.filter((c) => c.id !== clipId);
-  const dragDur = clipDuration(dragged);
-  // insertion index: before the first clip whose midpoint is after the dropped clip's midpoint
-  const mid = dropStartMs + dragDur / 2;
+  // insertion index: before the first clip whose midpoint lies after the dropped clip's left edge
   let cursor = 0;
   let index = others.length;
   for (let i = 0; i < others.length; i++) {
     const d = clipDuration(others[i]!);
-    if (mid < cursor + d / 2) {
+    if (dropStartMs < cursor + d / 2) {
       index = i;
       break;
     }

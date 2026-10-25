@@ -3,7 +3,7 @@
  * and resolve every asset URL in an EditScript for the Remotion Player.
  */
 import "server-only";
-import { getStorage } from "@vibe/core";
+import { mediaUrl } from "@/lib/media-url";
 import type { EditScript } from "@vibe/edl";
 
 const ABSOLUTE = /^(https?:)?\/\/|^data:|^blob:/i;
@@ -15,13 +15,8 @@ export function isAbsoluteUrl(value: string): boolean {
 /** A storage key or absolute URL -> URL a browser can fetch. */
 export async function resolveMediaUrl(keyOrUrl: string | null | undefined, opts?: { download?: string }): Promise<string | null> {
   if (!keyOrUrl) return null;
-  if (isAbsoluteUrl(keyOrUrl) && !opts?.download) return keyOrUrl;
   if (isAbsoluteUrl(keyOrUrl)) return keyOrUrl;
-  try {
-    return await getStorage().getUrl(keyOrUrl, opts);
-  } catch {
-    return null;
-  }
+  return mediaUrl(keyOrUrl, opts);
 }
 
 /** Returns a copy of the script whose assets[*].url are all fetchable. */
