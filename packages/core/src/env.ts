@@ -21,7 +21,7 @@ function str(name: string, fallback = ""): string {
 export const env = {
   get nodeEnv() { return str("NODE_ENV", "development"); },
   get isProd() { return this.nodeEnv === "production"; },
-  get appUrl() { return str("APP_URL", "http://localhost:3000").replace(/\/$/, ""); },
+  get appUrl() { return str("APP_URL", str("RENDER_EXTERNAL_URL", "http://localhost:3000")).replace(/\/$/, ""); },
   get dataDir() {
     const raw = str("DATA_DIR", "./data");
     return path.isAbsolute(raw) ? raw : path.resolve(workspaceRoot(), raw);
