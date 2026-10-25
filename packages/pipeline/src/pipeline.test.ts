@@ -162,7 +162,7 @@ test("analyze: transcript (mock), shots, silences, READY + plan enqueued", { ski
   assert.ok(await queuedJob("plan", { projectId: state.projectId }), "plan job enqueued once all assets are READY");
 });
 
-test("plan -> build -> edit through the agent (skipped while the agent is a stub)", { skip: !dbOk }, async (t) => {
+test("plan -> build -> edit through the agent", { skip: !dbOk }, async (t) => {
   const planJob = await queuedJob("plan", { projectId: state.projectId });
   assert.ok(planJob);
   const planRun = await run("plan", { projectId: state.projectId });
