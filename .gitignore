@@ -14,3 +14,5 @@ coverage
 *.log
 .DS_Store
 packages/db/src/generated
+dump.rdb
+*.rdb
