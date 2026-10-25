@@ -41,13 +41,16 @@ Launch wedge: **short-form talking-head and vlog content** (highest volume, most
 
 ## 4. How we beat cardboard.ai (positioning)
 *(Factual gaps are detailed in `01-cardboard-competitive-analysis.md`; this is the strategy.)*
-1. **Chat + real timeline.** Pure chat editing frustrates users when the AI gets one thing wrong; give them a timeline so the last 10 % is a drag, not a prompt.
-2. **Plan-before-render transparency.** Users see and approve the edit plan; builds trust and cuts wasted credits.
-3. **Instant previews.** Browser-side EDL playback means iteration is free and fast; competitors make you wait for a render each time.
-4. **Audio quality as a feature.** Most AI editors ignore loudness, ducking and sound design; owning "it sounds pro" is cheap and visible.
-5. **Open recipe system.** Users can save their own recipes and (later) share/sell them — a marketplace is a growth loop cardboard doesn't have.
-6. **Clear, minutes-based pricing** with a genuinely useful free tier and no watermark surprises.
-7. **Web-first, no download required** for any feature; desktop later as a convenience, not a requirement.
+Cardboard already has a real timeline, chat checkpoints, agent self-verification, recipes and reference remixing, so none of those are differentiators on their own. We win on the things their users complain about and the things their architecture (client-side rendering, Mac-only local processing) makes hard:
+
+1. **Predictable pricing.** Minutes-based credits, a cost estimate shown *before* each agent run, hard budgets, free previews and re-edits. Credit anxiety is Cardboard's #1 complaint.
+2. **Plan-before-render.** The agent shows a shot list / beat plan the user approves before it spends credits. Users on Hacker News asked Cardboard for exactly this.
+3. **Server-side rendering with instant browser preview.** No Chrome memory crashes, no 2.5/10 GB file caps, consistent output quality, works on Windows, Linux, Chromebooks and phones. Cardboard renders in the browser and only processes locally on Apple Silicon.
+4. **Audio quality as a feature.** Loudness normalisation, ducking, *generated* SFX and music (Cardboard only picks library tracks).
+5. **Deterministic QA.** Caption safe zones, loudness, duration targets and platform specs shown as green ticks on every export.
+6. **Ingest and publish anywhere.** YouTube/Drive/Dropbox import and direct publishing + scheduling with an analytics loop. Cardboard has neither.
+7. **Brand memory and an open recipe system.** Brand kits, per-client presets, learning from past edits; user-created recipes that can be shared and later sold. "Memory" is on Cardboard's own unsolved-problems list; their recipes are first-party only.
+8. **API/MCP-first.** A public API and MCP server for agencies and agent builders from day one of v2.
 
 ## 5. UI direction
 - Dark, cinematic, calm. Serif display headline ("Let's cut your product demo, podbot"), sans body. Generous whitespace. Thumbnail-led browsing with hover-to-play.
