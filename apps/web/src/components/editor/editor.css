@@ -1,0 +1,65 @@
+/* Editor-only styles: range inputs, thin scrollbars. */
+.vibe-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 14px;
+  background: transparent;
+  cursor: pointer;
+}
+.vibe-range::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.vibe-range::-moz-range-track {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.vibe-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  margin-top: -4px;
+  border-radius: 999px;
+  background: #f2f2f5;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  transition: transform 0.1s;
+}
+.vibe-range::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: #f2f2f5;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+}
+.vibe-range:hover::-webkit-slider-thumb,
+.vibe-range:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.15);
+  background: #ffd400;
+}
+.vibe-range:focus-visible {
+  outline: none;
+}
+
+[data-stage] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+[data-stage] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+[data-stage] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+[data-stage] ::-webkit-scrollbar-track,
+[data-stage] ::-webkit-scrollbar-corner {
+  background: transparent;
+}

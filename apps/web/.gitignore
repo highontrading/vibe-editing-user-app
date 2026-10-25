@@ -1,0 +1,2 @@
+# Alternate Next dist dirs (NEXT_DIST_DIR=.next-xyz) used to run several dev servers/builds on one checkout.
+.next-*
