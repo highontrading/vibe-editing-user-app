@@ -1,17 +1,27 @@
 import React from "react";
 import { Composition } from "remotion";
-import { emptyScript, type EditScript } from "@vibe/edl";
-import { COMPOSITION_ID, EditScriptComposition, getCompositionMetadata } from "./EditScriptComposition";
+import { emptyScript } from "@vibe/edl";
+import { COMPOSITION_ID, EditScriptComposition, getCompositionMetadata, type EditScriptCompositionProps } from "./EditScriptComposition";
+import { captionPreviewScript } from "./previews";
+
+function defaultScript() {
+  const s = captionPreviewScript("bold-pop");
+  s.meta.title = "Preview";
+  return s;
+}
 
 export const RemotionRoot: React.FC = () => {
-  const defaultScript = emptyScript({ aspect: "9:16", title: "Preview" });
-  defaultScript.output.durationMs = 3000;
+  const fallback = emptyScript({ aspect: "9:16" });
+  const defaultProps: EditScriptCompositionProps = { script: defaultScript(), watermark: false };
   return (
     <Composition
       id={COMPOSITION_ID}
-      component={EditScriptComposition as React.FC<{ script: EditScript }>}
-      defaultProps={{ script: defaultScript }}
-      calculateMetadata={({ props }) => getCompositionMetadata(props.script)}
+      component={EditScriptComposition}
+      defaultProps={defaultProps}
+      calculateMetadata={({ props }) => {
+        const meta = getCompositionMetadata(props.script ?? fallback);
+        return { ...meta, props };
+      }}
       width={1080}
       height={1920}
       fps={30}

@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@remotion/cli": "4.0.538",
+    "@remotion/google-fonts": "4.0.538",
     "@remotion/transitions": "4.0.538",
     "@vibe/edl": "workspace:*",
     "remotion": "4.0.538"
@@ -26,6 +27,8 @@
     "react-dom": ">=18"
   },
   "devDependencies": {
+    "@remotion/bundler": "4.0.538",
+    "@remotion/renderer": "4.0.538",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "react": "19.3.1",

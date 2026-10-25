@@ -4,3 +4,8 @@ export * from "./card";
 export * from "./dialog";
 export * from "./tabs";
 export * from "./toast";
+export * from "./skeleton";
+export * from "./menu";
+export * from "./switch";
+export * from "./progress";
+export * from "./segmented";

@@ -11,3 +11,13 @@
  */
 export * from "./types";
 export { createPlan, buildScript, editScript, selfCheck, describeFrames, pickHooks, quickSuggestions, isMockMode } from "./agent";
+
+// Additional exports (deterministic engine pieces other packages may reuse).
+export { buildFromPlan, applyPlanTweaks, resolveParams, summarizeBuild, trimScriptToTarget, normalizeEnds, OpRecorder, type BuildParams, type BuildStats, type BuildOutput } from "./builder";
+export { buildManifest, MANIFEST_TOKEN_BUDGET } from "./manifest";
+export { mockPlan, parseBrief, PlanOutputSchema } from "./plan";
+export { mockEdit } from "./edit";
+export { describeScriptState, findPhrase } from "./tools";
+export { scoreHookText } from "./hooks";
+export type { FrameInput, FrameDescription } from "./vision";
+export { EDITOR_PLAYBOOK } from "./prompts";

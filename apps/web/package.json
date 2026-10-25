@@ -17,6 +17,7 @@
     "@vibe/core": "workspace:*",
     "@vibe/db": "workspace:*",
     "@vibe/edl": "workspace:*",
+    "@vibe/media": "workspace:*",
     "@vibe/pipeline": "workspace:*",
     "bcryptjs": "3.0.3",
     "clsx": "2.1.1",
