@@ -6,6 +6,7 @@
  * Undo/redo is a client stack of scripts; each undo/redo persists a new version
  * via a `replaceScript` op so the version history always matches the preview.
  */
+import * as React from "react";
 import { create } from "zustand";
 import { applyOps as applyOpsEdl, OpError, type EditOp, type EditScript } from "@vibe/edl";
 import { api } from "@/lib/utils";
@@ -75,6 +76,7 @@ export interface EditorState {
   setExports: (exports: ExportView[]) => void;
   refreshVersions: () => Promise<void>;
   refreshProject: () => Promise<void>;
+  refreshProjectForce: () => Promise<void>;
 
   applyOps: (ops: EditOp[], label: string, opts?: { silent?: boolean; coalesce?: string }) => boolean;
   lastCoalesce: string | null;
@@ -196,6 +198,16 @@ export const useEditor = create<EditorState>((set, get) => ({
     }
   },
 
+  refreshProjectForce: async () => {
+    const { projectId } = get();
+    try {
+      const view = await api<ProjectView>(`/api/projects/${projectId}`);
+      set({ project: view });
+    } catch {
+      /* ignore */
+    }
+  },
+
   refreshProject: async () => {
     const { projectId } = get();
     try {
@@ -272,10 +284,24 @@ export const useEditor = create<EditorState>((set, get) => ({
       set({ saving: false });
       const msg = e instanceof Error ? e.message : "Save failed";
       if (/changed since/i.test(msg)) {
-        toast.error("This project changed elsewhere", "Reloading the latest version.");
-        await get().refreshProject();
-        const view = get().project;
-        if (view?.currentVersion) get().adoptScript(view.currentVersion.script, { ...view.currentVersion }, { pushUndo: false });
+        // Someone else (the agent, another tab) saved first: rebase this batch on the latest version and retry once.
+        await get().refreshProjectForce();
+        const latest = get().project?.currentVersion;
+        if (!latest) return;
+        let rebased: EditScript | null = null;
+        try {
+          rebased = applyOpsEdl(latest.script, batch.ops);
+        } catch {
+          rebased = null;
+        }
+        if (!rebased) {
+          toast.error("This project changed elsewhere", "Your last edit could not be re-applied to the newer version.");
+          get().adoptScript(latest.script, { ...latest }, { pushUndo: false });
+          return;
+        }
+        set((st) => ({ script: rebased, currentVersionId: latest.id, undoStack: [...st.undoStack.slice(-49), latest.script], redoStack: [], pending: { ops: batch.ops, labels: batch.labels }, versions: [{ ...latest }, ...st.versions.filter((v) => v.id !== latest.id)] }));
+        toast.info("Merged with a newer version", "Your edit was re-applied on top of it.");
+        await get().flush();
       } else {
         toast.error("Couldn't save your edit", msg);
         // keep the ops so a later edit retries them
@@ -361,39 +387,45 @@ export function useDisplayScript(): EditScript | null {
 }
 
 export function useSelectedClip() {
-  return useEditor((s) => {
-    if (!s.script || s.selection?.kind !== "clip") return null;
-    for (const t of s.script.tracks) {
+  const script = useEditor((s) => s.script);
+  const selection = useEditor((s) => s.selection);
+  return React.useMemo(() => {
+    if (!script || selection?.kind !== "clip") return null;
+    for (const t of script.tracks) {
       if (t.kind !== "video") continue;
-      const clip = t.clips.find((c) => c.id === s.selection!.id);
+      const clip = t.clips.find((c) => c.id === selection.id);
       if (clip) return { clip, track: t };
     }
     return null;
-  });
+  }, [script, selection]);
 }
 
 export function useSelectedAudio() {
-  return useEditor((s) => {
-    if (!s.script || s.selection?.kind !== "audio") return null;
-    for (const t of s.script.tracks) {
+  const script = useEditor((s) => s.script);
+  const selection = useEditor((s) => s.selection);
+  return React.useMemo(() => {
+    if (!script || selection?.kind !== "audio") return null;
+    for (const t of script.tracks) {
       if (t.kind !== "audio") continue;
-      const clip = t.clips.find((c) => c.id === s.selection!.id);
+      const clip = t.clips.find((c) => c.id === selection.id);
       if (clip) return { clip, track: t };
     }
     return null;
-  });
+  }, [script, selection]);
 }
 
 export function useSelectedGraphic() {
-  return useEditor((s) => {
-    if (!s.script || s.selection?.kind !== "graphic") return null;
-    for (const t of s.script.tracks) {
+  const script = useEditor((s) => s.script);
+  const selection = useEditor((s) => s.selection);
+  return React.useMemo(() => {
+    if (!script || selection?.kind !== "graphic") return null;
+    for (const t of script.tracks) {
       if (t.kind !== "graphics") continue;
-      const item = t.items.find((g) => g.id === s.selection!.id);
+      const item = t.items.find((g) => g.id === selection.id);
       if (item) return { item, track: t };
     }
     return null;
-  });
+  }, [script, selection]);
 }
 
 /** Flush pending ops immediately (used before navigation / export). */

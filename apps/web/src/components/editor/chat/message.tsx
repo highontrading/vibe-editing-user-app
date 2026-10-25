@@ -1,4 +1,5 @@
 "use client";
+const NO_JOBS: never[] = [];
 import * as React from "react";
 import { Check, X, Loader2, History, RotateCcw, Sparkles, AlertTriangle, Eye } from "lucide-react";
 import type { CheckResult } from "@vibe/edl";
@@ -25,7 +26,7 @@ function UserMessage({ message }: { message: MessageView }) {
 function AssistantMessage({ message, isLast, onSuggestion }: { message: MessageView; isLast: boolean; onSuggestion: (s: string) => void }) {
   const currentVersionId = useEditor((s) => s.currentVersionId);
   const previewVersion = useEditor((s) => s.previewVersion);
-  const jobs = useEditor((s) => s.project?.jobs ?? []);
+  const jobs = useEditor((s) => s.project?.jobs ?? NO_JOBS);
   const data = message.data ?? {};
   const pending = message.status === "pending";
   const error = message.status === "error";

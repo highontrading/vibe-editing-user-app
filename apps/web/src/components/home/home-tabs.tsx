@@ -14,18 +14,20 @@ import { fetcher } from "@/lib/utils";
 import type { ProjectDTO, RecipeDTO } from "@/lib/types";
 
 export function HomeTabs({ recipes, projects: initialProjects }: { recipes: RecipeDTO[]; projects: ProjectDTO[] }) {
-  const [tab, setTab] = React.useState<"recipes" | "projects">(() => {
-    try {
-      return (localStorage.getItem("vibe.homeTab") as "recipes" | "projects") || (initialProjects.length ? "projects" : "recipes");
-    } catch {
-      return "recipes";
-    }
-  });
+  // Deterministic first render (SSR), then restore the viewer's last tab.
+  const [tab, setTabState] = React.useState<"recipes" | "projects">(initialProjects.length ? "projects" : "recipes");
   React.useEffect(() => {
     try {
-      localStorage.setItem("vibe.homeTab", tab);
+      const saved = localStorage.getItem("vibe.homeTab");
+      if (saved === "recipes" || saved === "projects") setTabState(saved);
     } catch {}
-  }, [tab]);
+  }, []);
+  const setTab = (t: "recipes" | "projects") => {
+    setTabState(t);
+    try {
+      localStorage.setItem("vibe.homeTab", t);
+    } catch {}
+  };
   const { data, mutate } = useSWR<{ projects: ProjectDTO[] }>("/api/projects?archived=0&limit=12", fetcher, { fallbackData: { projects: initialProjects }, refreshInterval: 15000 });
   const projects = data?.projects ?? initialProjects;
   const { onAction, dialogs } = useProjectActions((fn, revalidate) => mutate((cur) => ({ projects: fn(cur?.projects ?? []) }), { revalidate: revalidate ?? false }));

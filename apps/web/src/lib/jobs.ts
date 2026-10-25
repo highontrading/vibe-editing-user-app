@@ -11,32 +11,44 @@
  */
 import { env, registerInlineRunner } from "@vibe/core";
 
-type Loaded = { runJob: import("@vibe/core").JobRunner };
-const g = globalThis as unknown as { __vibeJobRunner?: Promise<Loaded | null> };
+type PipelineModule = typeof import("@vibe/pipeline");
+const g = globalThis as unknown as { __vibePipeline?: Promise<PipelineModule> };
 
-async function loadPipeline(): Promise<Loaded | null> {
-  try {
-    const tsx = (await import(/* webpackIgnore: true */ "tsx/esm/api")) as { register: (o?: unknown) => unknown };
-    tsx.register();
-    const pipeline = (await import(/* webpackIgnore: true */ "@vibe/pipeline")) as typeof import("@vibe/pipeline");
-    // The natively loaded pipeline has its own copy of @vibe/core; jobs it enqueues (ingest -> analyze -> plan)
-    // must find a runner there too.
-    const nativeCore = (await import(/* webpackIgnore: true */ "@vibe/core")) as typeof import("@vibe/core");
-    nativeCore.registerInlineRunner(pipeline.runJob);
-    return { runJob: pipeline.runJob };
-  } catch (e) {
-    console.error("[jobs] could not load @vibe/pipeline for inline jobs:", e);
-    return null;
+/**
+ * Loads @vibe/pipeline outside the webpack bundle. Use this from any route
+ * handler that needs the pipeline (`const { media } = await loadPipeline()`);
+ * a static `import ... from "@vibe/pipeline"` in server code breaks `next build`.
+ */
+export function loadPipeline(): Promise<PipelineModule> {
+  if (!g.__vibePipeline) {
+    g.__vibePipeline = (async () => {
+      const tsx = (await import(/* webpackIgnore: true */ "tsx/esm/api")) as { register: (o?: unknown) => unknown };
+      tsx.register();
+      const pipeline = (await import(/* webpackIgnore: true */ "@vibe/pipeline")) as PipelineModule;
+      // The natively loaded pipeline has its own copy of @vibe/core; jobs it enqueues (ingest -> analyze -> plan)
+      // must find an inline runner there too.
+      if (!env.redisUrl) {
+        const nativeCore = (await import(/* webpackIgnore: true */ "@vibe/core")) as typeof import("@vibe/core");
+        nativeCore.registerInlineRunner(pipeline.runJob);
+      }
+      return pipeline;
+    })();
+    g.__vibePipeline.catch((e) => {
+      console.error("[jobs] could not load @vibe/pipeline:", e);
+      g.__vibePipeline = undefined;
+    });
   }
+  return g.__vibePipeline;
 }
 
 export async function ensureJobRunner() {
   if (env.redisUrl) return;
-  if (!g.__vibeJobRunner) g.__vibeJobRunner = loadPipeline();
-  const loaded = await g.__vibeJobRunner;
-  if (loaded) registerInlineRunner(loaded.runJob);
-  else
+  try {
+    const { runJob } = await loadPipeline();
+    registerInlineRunner(runJob);
+  } catch (e) {
     registerInlineRunner(async (job) => {
-      throw new Error(`Inline job runner unavailable (pipeline failed to load): ${job.type}`);
+      throw new Error(`Inline job runner unavailable (pipeline failed to load: ${e instanceof Error ? e.message : e}): ${job.type}`);
     });
+  }
 }

@@ -10,7 +10,7 @@ import { IconButton, PanelHeader } from "../panel";
 import { ContextMenu, type MenuItem } from "./context-menu";
 import { Ruler } from "./ruler";
 import { LABEL_W, RULER_H, ScaleContext, makeScale, startPointerDrag } from "./scale";
-import { TrackRow } from "./tracks";
+import { TrackRow, trackHeight } from "./tracks";
 import { TimelineUiContext, type MenuTarget } from "./timeline-ui";
 
 /** Display order: graphics, captions, b-roll (top layer first), main video, then audio by role. */
@@ -121,7 +121,7 @@ export function Timeline() {
   };
 
   if (!script) return null;
-  const totalH = RULER_H + tracks.reduce((n, t) => n + (t.kind === "video" ? (t.layer === 0 ? 58 : 40) : t.kind === "audio" ? 36 : t.kind === "captions" ? 22 : 28) + 1, 0);
+  const totalH = RULER_H + tracks.reduce((n, t) => n + trackHeight(t, script) + 1, 0);
 
   return (
     <ScaleContext.Provider value={scale}>

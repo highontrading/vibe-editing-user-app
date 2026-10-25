@@ -25,6 +25,8 @@ export type AssetDTO = {
   thumbUrl: string | null;
   proxyUrl: string | null;
   waveformUrl: string | null;
+  /** Tiled thumbnail strip (derived/{id}/strip.jpg), only on the detail endpoint. */
+  stripUrl?: string | null;
   job?: { status: string; message: string | null; progress: number; error: string | null } | null;
   analysis?: AssetAnalysisDTO | null;
 };

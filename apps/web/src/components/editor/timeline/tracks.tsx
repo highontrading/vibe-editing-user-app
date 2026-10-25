@@ -20,19 +20,78 @@ export function snapCandidates(script: EditScript, exclude: string | null, playh
   return out;
 }
 
+/**
+ * Main-track clips are packed by `ripple()` (sorted by startMs, stable). A single
+ * `moveClip` therefore cannot place a clip before the clip already at 0. To reorder we
+ * decide the target index from the drop position and emit one `moveClip` per clip, each
+ * to a start beyond the end, in the desired order: the result is deterministic on both
+ * the client and the server. If the order does not change, nothing is emitted.
+ */
+export function reorderOps(script: EditScript, trackId: string, clipId: string, dropStartMs: number): import("@vibe/edl").EditOp[] {
+  const track = script.tracks.find((t) => t.id === trackId);
+  if (!track || track.kind !== "video") return [];
+  const ordered = [...track.clips].sort((a, b) => a.startMs - b.startMs);
+  const dragged = ordered.find((c) => c.id === clipId);
+  if (!dragged) return [];
+  const others = ordered.filter((c) => c.id !== clipId);
+  const dragDur = clipDuration(dragged);
+  // insertion index: before the first clip whose midpoint is after the dropped clip's midpoint
+  const mid = dropStartMs + dragDur / 2;
+  let cursor = 0;
+  let index = others.length;
+  for (let i = 0; i < others.length; i++) {
+    const d = clipDuration(others[i]!);
+    if (mid < cursor + d / 2) {
+      index = i;
+      break;
+    }
+    cursor += d;
+  }
+  const desired = [...others.slice(0, index), dragged, ...others.slice(index)];
+  if (desired.every((c, i) => c.id === ordered[i]!.id)) return [];
+  const beyond = ordered.reduce((n, c) => n + clipDuration(c), 0) + 1000;
+  return desired.map((c) => ({ op: "moveClip" as const, clipId: c.id, startMs: beyond }));
+}
+
 /* ------------------------------------------------------------------ */
 /* Track rows                                                           */
 /* ------------------------------------------------------------------ */
 
+/** Overlapping graphics stack into lanes so every pill stays readable. */
+export function graphicLanes(items: GraphicItem[], durationMs: number): Map<string, number> {
+  const lanes: number[] = [];
+  const out = new Map<string, number>();
+  const sorted = [...items].sort((a, b) => a.startMs - b.startMs || b.durationMs - a.durationMs);
+  for (const g of sorted) {
+    const end = g.durationMs === 0 ? Math.max(durationMs, g.startMs + 1) : g.startMs + g.durationMs;
+    let lane = lanes.findIndex((laneEnd) => laneEnd <= g.startMs);
+    if (lane === -1) {
+      lane = lanes.length;
+      lanes.push(end);
+    } else lanes[lane] = end;
+    out.set(g.id, lane);
+  }
+  return out;
+}
+
+export function trackHeight(track: Track, script: EditScript): number {
+  if (track.kind === "video") return track.layer === 0 ? TRACK_H.main : TRACK_H.broll;
+  if (track.kind === "audio") return TRACK_H.audio;
+  if (track.kind === "captions") return TRACK_H.captions;
+  const lanes = Math.max(1, new Set(graphicLanes(track.items, script.output.durationMs).values()).size);
+  return TRACK_H.graphics + (lanes - 1) * 22;
+}
+
 export function TrackRow({ track, script, width }: { track: Track; script: EditScript; width: number }) {
-  const height = track.kind === "video" ? (track.layer === 0 ? TRACK_H.main : TRACK_H.broll) : track.kind === "audio" ? TRACK_H.audio : track.kind === "captions" ? TRACK_H.captions : TRACK_H.graphics;
+  const height = trackHeight(track, script);
+  const lanes = React.useMemo(() => (track.kind === "graphics" ? graphicLanes(track.items, script.output.durationMs) : null), [track, script.output.durationMs]);
   return (
     <div className="flex border-b border-border/70" style={{ height, width: LABEL_W + width }}>
       <TrackLabel track={track} />
       <div className="relative flex-1 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.015),transparent)]" style={{ width }} onPointerDown={(e) => e.button === 0 && e.target === e.currentTarget && useEditor.getState().select(null)}>
         {track.kind === "video" && track.clips.map((c) => <VideoClipBlock key={c.id} clip={c} track={track} script={script} />)}
         {track.kind === "audio" && track.clips.map((c) => <AudioClipBlock key={c.id} clip={c} track={track} script={script} />)}
-        {track.kind === "graphics" && track.items.map((g) => <GraphicBlock key={g.id} item={g} track={track} script={script} />)}
+        {track.kind === "graphics" && track.items.map((g) => <GraphicBlock key={g.id} item={g} track={track} script={script} lane={lanes?.get(g.id) ?? 0} />)}
         {track.kind === "captions" && <CaptionWords track={track} />}
       </div>
     </div>
@@ -181,7 +240,9 @@ function VideoClipBlock({ clip, track, script }: { clip: VideoClip; track: Video
           return;
         }
         if (mode === "move") {
-          if (result.startMs !== clip.startMs) s.applyOps([{ op: "moveClip", clipId: clip.id, startMs: result.startMs }], "Move clip");
+          if (result.startMs === clip.startMs) return;
+          if (isMain && s.script) s.applyOps(reorderOps(s.script, track.id, clip.id, result.startMs), "Move clip");
+          else s.applyOps([{ op: "moveClip", clipId: clip.id, startMs: result.startMs }], "Move clip");
         } else if (mode === "trim-left") {
           if (result.inMs !== clip.inMs) {
             const ops: import("@vibe/edl").EditOp[] = [{ op: "trimClip", clipId: clip.id, inMs: result.inMs }];
@@ -406,7 +467,7 @@ function Waveform({ hue, seed }: { hue: number; seed: string }) {
 /* Graphics                                                             */
 /* ------------------------------------------------------------------ */
 
-function GraphicBlock({ item, track, script }: { item: GraphicItem; track: GraphicsTrack; script: EditScript }) {
+function GraphicBlock({ item, track, script, lane }: { item: GraphicItem; track: GraphicsTrack; script: EditScript; lane: number }) {
   const scale = useScale();
   const ui = useTimelineUi();
   const selected = useEditor((s) => s.selection?.kind === "graphic" && s.selection.id === item.id);
@@ -472,8 +533,8 @@ function GraphicBlock({ item, track, script }: { item: GraphicItem; track: Graph
 
   return (
     <div
-      className={cn("absolute top-1 bottom-1 flex cursor-grab select-none items-center gap-1 overflow-hidden rounded-full border px-2 text-[10px] leading-none", selected ? "z-10 border-accent bg-accent/30 text-fg" : "border-accent/30 bg-accent/15 text-accent hover:border-accent/60")}
-      style={{ left, width }}
+      className={cn("absolute flex h-[20px] cursor-grab select-none items-center gap-1 overflow-hidden rounded-full border px-2 text-[10px] leading-none", selected ? "z-10 border-accent bg-accent/30 text-fg" : "border-accent/30 bg-accent/15 text-accent hover:border-accent/60")}
+      style={{ left, width, top: 4 + lane * 22 }}
       onPointerDown={onPointerDown}
       onContextMenu={(e) => {
         e.preventDefault();

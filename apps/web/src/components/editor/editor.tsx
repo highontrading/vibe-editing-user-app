@@ -83,7 +83,7 @@ export function Editor({ projectId, initial }: { projectId: string; initial: Pro
           {stage === "editor" && (
             <>
               <PreviewPanel />
-              <Panel open={timelineOpen} axis="y" size={236} className="border-t border-border">
+              <Panel open={timelineOpen} axis="y" size={262} className="border-t border-border">
                 <Timeline />
               </Panel>
             </>

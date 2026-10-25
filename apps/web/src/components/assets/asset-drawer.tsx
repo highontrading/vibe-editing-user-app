@@ -85,12 +85,12 @@ export function AssetDrawer({ assetId, onClose, onChanged, onDelete, onUse }: { 
                     </div>
                   )}
                 </div>
-                {asset.thumbUrl && asset.kind === "VIDEO" && (
+                {asset.stripUrl && asset.kind === "VIDEO" && (
                   <div className="border-b border-border px-4 py-3">
                     <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted">Thumbnail strip</div>
                     <div className="no-scrollbar overflow-x-auto rounded-lg">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={asset.thumbUrl} alt="" className="h-16 max-w-none" />
+                      <img src={asset.stripUrl} alt="" className="h-16 max-w-none" />
                     </div>
                   </div>
                 )}

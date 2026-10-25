@@ -209,7 +209,7 @@ export function AssetsView({ initial }: { initial: { assets: AssetDTO[]; folders
             </Select>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setSelected(allSelected ? new Set() : new Set(assets.map((a) => a.id)))} className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs text-muted hover:bg-white/6 hover:text-fg">
+            <button onClick={() => setSelected(allSelected ? new Set() : new Set(assets.map((a) => a.id)))} className="flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-xs text-muted hover:bg-white/6 hover:text-fg">
               {allSelected ? <CheckSquare className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />} {allSelected ? "Clear" : "Select all"}
             </button>
             <div className="inline-flex rounded-lg border border-border p-0.5">

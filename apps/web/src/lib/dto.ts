@@ -2,11 +2,17 @@
  * Server-side mappers from Prisma rows to the client DTOs in ./types.
  */
 import { prisma, type Asset, type Project, type Recipe, type Job, type User } from "@vibe/db";
+import { getStorage, storageKeys } from "@vibe/core";
 import { mediaUrl, withMediaUrls } from "./media-url";
 import type { AssetDTO, JobDTO, MeDTO, ProjectDTO, RecipeDTO, Preferences } from "./types";
 
 export async function assetToDTO(a: Asset, job?: Job | null, includeAnalysis = false): Promise<AssetDTO> {
   const m = await withMediaUrls(a);
+  let stripUrl: string | null | undefined;
+  if (includeAnalysis && a.kind === "VIDEO" && a.status === "READY") {
+    const key = storageKeys().derived(a.id, "strip.jpg");
+    stripUrl = (await getStorage().exists(key).catch(() => false)) ? await mediaUrl(key) : null;
+  }
   return {
     id: a.id,
     name: a.name,
@@ -30,6 +36,7 @@ export async function assetToDTO(a: Asset, job?: Job | null, includeAnalysis = f
     thumbUrl: m.thumbUrl,
     proxyUrl: m.proxyUrl,
     waveformUrl: m.waveformUrl,
+    stripUrl,
     job: job ? { status: job.status, message: job.message, progress: job.progress, error: job.error } : null,
     analysis: includeAnalysis ? ((a.analysis as AssetDTO["analysis"]) ?? null) : undefined,
   };
