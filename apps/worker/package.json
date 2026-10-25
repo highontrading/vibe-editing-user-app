@@ -1,0 +1,20 @@
+{
+  "name": "@vibe/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "build": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@vibe/core": "workspace:*",
+    "@vibe/db": "workspace:*",
+    "@vibe/pipeline": "workspace:*",
+    "bullmq": "6.4.2",
+    "ioredis": "6.0.0",
+    "tsx": "4.23.15"
+  }
+}

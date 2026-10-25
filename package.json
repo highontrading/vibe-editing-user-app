@@ -1,0 +1,23 @@
+{
+  "name": "vibe-editor",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "dev": "pnpm --filter @vibe/web dev",
+    "dev:worker": "pnpm --filter @vibe/worker dev",
+    "build": "pnpm -r --filter './packages/**' build && pnpm --filter @vibe/web build",
+    "build:worker": "pnpm -r --filter './packages/**' build && pnpm --filter @vibe/worker build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm -r --if-present test",
+    "db:generate": "pnpm --filter @vibe/db generate",
+    "db:push": "pnpm --filter @vibe/db push",
+    "db:migrate": "pnpm --filter @vibe/db migrate",
+    "db:seed": "pnpm --filter @vibe/db seed"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "tsx": "4.23.15",
+    "@types/node": "22.19.0"
+  }
+}
